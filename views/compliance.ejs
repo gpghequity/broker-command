@@ -1,0 +1,82 @@
+<section class="page-header">
+  <h1 class="h1">Compliance &amp; Licensing</h1>
+  <div class="sub">Broker-of-record regulatory tracking. Nothing falls through the cracks.</div>
+</section>
+
+<section class="stats-row stats-4">
+  <% statusCards.forEach(s => { %>
+    <div class="stat-card stat-card-tone-<%= s.tone %>">
+      <div class="stat-label"><%= s.label %></div>
+      <div class="stat-value stat-value-sm"><%= s.value %></div>
+      <div class="stat-delta delta-muted"><%= s.sub %></div>
+    </div>
+  <% }); %>
+</section>
+
+<section class="card">
+  <nav class="tabs" id="compliance-tabs">
+    <button type="button" class="tab-btn active" data-tab="calendar">License &amp; Regulatory Calendar</button>
+    <button type="button" class="tab-btn" data-tab="flags">Open Compliance Flags</button>
+    <button type="button" class="tab-btn" data-tab="docs">Insurance &amp; Entity Docs</button>
+  </nav>
+
+  <div class="tab-panel active" data-panel="calendar">
+    <ol class="timeline">
+      <% deadlines.forEach(d => { %>
+        <li class="timeline-item<%= d.urgent ? ' timeline-urgent' : '' %>">
+          <div class="timeline-date"><%= d.date %></div>
+          <div class="timeline-body">
+            <div class="timeline-title"><%= d.title %></div>
+            <div class="sub"><%= d.sub %></div>
+          </div>
+          <div class="timeline-actions">
+            <button type="button" class="btn btn-primary btn-xs" onclick="alert('Mark complete — v2');">Mark Complete</button>
+            <button type="button" class="btn btn-ghost btn-xs" onclick="alert('Reminder set — v2');">Set Reminder</button>
+          </div>
+        </li>
+      <% }); %>
+    </ol>
+  </div>
+
+  <div class="tab-panel" data-panel="flags">
+    <% if (!flags.length) { %>
+      <div class="empty-state">No open compliance flags. All clear.</div>
+    <% } else { %>
+      <% flags.forEach(f => { %>
+        <article class="flag-card">
+          <div class="flag-head">
+            <div>
+              <div class="flag-title"><%= f.property %></div>
+              <div class="sub">Source: <%= f.source %> · Assigned: <%= f.assigned %></div>
+            </div>
+            <div class="flag-days"><%= f.daysOpen %> days open</div>
+          </div>
+          <div class="flag-body">
+            <div class="flag-row"><span class="flag-label">Type</span><span class="flag-val"><%= f.type %></span></div>
+            <div class="flag-row"><span class="flag-label">Status</span><span class="flag-val"><%= f.status %></span></div>
+          </div>
+          <div class="flag-actions">
+            <a href="<%= f.tcLink %>" target="_blank" class="btn btn-primary btn-sm">View in Transaction Command →</a>
+          </div>
+        </article>
+      <% }); %>
+    <% } %>
+  </div>
+
+  <div class="tab-panel" data-panel="docs">
+    <div class="doc-grid">
+      <% docs.forEach(d => { %>
+        <article class="doc-card">
+          <div class="doc-icon">📄</div>
+          <div class="doc-name"><%= d.name %></div>
+          <div class="sub">Updated <%= d.updated %></div>
+          <% if (d.expires) { %><div class="doc-expires">Expires <%= d.expires %></div><% } %>
+          <div class="doc-actions">
+            <button type="button" class="btn btn-ghost btn-xs" onclick="alert('Download — v2');">Download</button>
+            <button type="button" class="btn btn-primary btn-xs" onclick="alert('Replace — v2');">Replace</button>
+          </div>
+        </article>
+      <% }); %>
+    </div>
+  </div>
+</section>

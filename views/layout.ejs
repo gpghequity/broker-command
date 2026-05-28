@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title><%= typeof title !== 'undefined' ? title : 'Broker Command' %></title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display&family=DM+Sans:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="/css/style.css" />
+</head>
+<body class="page-<%= page %>">
+
+<% if (page !== 'login') { %>
+  <nav class="topnav">
+    <div class="topnav-inner">
+      <a class="brand" href="<%= isLoggedIn ? '/dashboard' : '/about' %>">
+        <span class="bc-badge bc-badge-sm">BC</span>
+        <span class="brand-text"><%= appName %></span>
+      </a>
+      <div class="nav-links">
+        <% if (isLoggedIn) { %>
+          <a href="/dashboard"  class="<%= currentPath === '/dashboard' ? 'active' : '' %>">Dashboard</a>
+          <a href="/recruiting" class="<%= currentPath === '/recruiting' ? 'active' : '' %>">Recruiting</a>
+          <a href="/marketing"  class="<%= currentPath === '/marketing' ? 'active' : '' %>">Marketing</a>
+          <a href="/compliance" class="<%= currentPath === '/compliance' ? 'active' : '' %>">Compliance</a>
+          <a href="/about"      class="<%= currentPath === '/about' ? 'active' : '' %>">About</a>
+          <a href="/logout" class="nav-logout">Logout</a>
+        <% } else { %>
+          <a href="/about" class="<%= currentPath === '/about' ? 'active' : '' %>">About</a>
+          <a href="/login" class="btn btn-ghost btn-sm">Sign In</a>
+        <% } %>
+      </div>
+    </div>
+  </nav>
+<% } %>
+
+<main class="main">
+  <%- include(page, typeof locals === 'object' ? locals : {}) %>
+</main>
+
+<footer class="site-footer">
+  &copy; 2026 Projects with a Purpose LLC &nbsp;|&nbsp; <%= appName %> <%= version %> &nbsp;|&nbsp; Last updated: <%= lastUpdated %>
+</footer>
+
+<% if (page === 'dashboard') { %><script src="/js/dashboard.js"></script><% } %>
+<% if (page === 'recruiting') { %><script src="/js/recruiting.js"></script><% } %>
+<% if (page === 'marketing' || page === 'compliance') { %><script src="/js/tabs.js"></script><% } %>
+
+</body>
+</html>

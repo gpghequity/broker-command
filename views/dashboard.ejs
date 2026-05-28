@@ -1,0 +1,130 @@
+<section class="exec-hero">
+  <div>
+    <h1 class="h1">Good morning, Steve</h1>
+    <div class="sub"><%= today %></div>
+  </div>
+  <div class="weather-placeholder">
+    <div class="weather-temp">68°</div>
+    <div class="weather-desc">Wilkes-Barre · Partly Cloudy</div>
+    <div class="sub">Live weather in v2</div>
+  </div>
+</section>
+
+<section class="stats-row stats-4">
+  <% stats.forEach(s => { %>
+    <div class="stat-card stat-card-exec">
+      <div class="stat-label"><%= s.label %></div>
+      <div class="stat-value"><%= s.value %></div>
+      <div class="stat-delta <%= s.deltaClass %>"><%= s.delta %></div>
+    </div>
+  <% }); %>
+</section>
+
+<div class="exec-grid">
+  <!-- LEFT — Agent productivity + Health score + Attention -->
+  <div class="exec-main">
+    <section class="card">
+      <div class="card-head">
+        <h2 class="h2">Agent Productivity Rankings</h2>
+        <div class="sub">By GCI YTD</div>
+      </div>
+      <div class="table-wrap">
+        <table class="bc-table">
+          <thead><tr><th>Rank</th><th>Agent</th><th>Txns</th><th>GCI YTD</th><th>Trend</th></tr></thead>
+          <tbody>
+            <% topAgents.forEach(a => { %>
+              <tr>
+                <td class="rank"><%= a.rank %></td>
+                <td><strong><%= a.name %></strong></td>
+                <td><%= a.txns %></td>
+                <td class="gci"><%= a.gci %></td>
+                <td class="trend"><%= a.trend %></td>
+              </tr>
+            <% }); %>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <section class="card" style="margin-top:18px;">
+      <div class="card-head">
+        <h2 class="h2">Brokerage Health Score</h2>
+        <div class="health-total">
+          <span class="health-num"><%= healthScore.total %></span><span class="health-denom">/100</span>
+        </div>
+      </div>
+      <div class="health-bars">
+        <% healthScore.breakdown.forEach(b => { %>
+          <div class="health-row">
+            <div class="health-label"><%= b.label %></div>
+            <div class="health-bar"><div class="health-fill health-<%= b.color %>" style="width: <%= b.score %>%;"></div></div>
+            <div class="health-score health-<%= b.color %>-text"><%= b.score %></div>
+          </div>
+        <% }); %>
+      </div>
+    </section>
+
+    <section class="card" style="margin-top:18px;">
+      <h2 class="h2">What Needs Your Attention</h2>
+      <ul class="attention-list">
+        <% attention.forEach(item => { %>
+          <li><span class="attn-dot"></span><%= item %></li>
+        <% }); %>
+      </ul>
+    </section>
+  </div>
+
+  <!-- RIGHT SIDEBAR — Other PwP Products -->
+  <aside class="exec-side">
+    <section class="card pwp-side">
+      <h2 class="h2">Other PwP Products</h2>
+      <div class="sub">Jump to any product in the platform.</div>
+      <div class="pwp-stack">
+        <% pwpFamily.forEach(app => { %>
+          <a href="<%= app.href %>" target="_blank" class="pwp-row">
+            <span class="pwp-badge"><%= app.badge %></span>
+            <div class="pwp-body">
+              <div class="pwp-name"><%= app.name %></div>
+              <div class="pwp-tag"><%= app.tag %></div>
+            </div>
+            <span class="pwp-action">Open →</span>
+          </a>
+        <% }); %>
+
+        <!-- Marketing Command — Coming Soon, gold border -->
+        <div class="pwp-row pwp-row-soon">
+          <span class="pwp-badge pwp-badge-gold"><%= marketingCommand.badge %></span>
+          <div class="pwp-body">
+            <div class="pwp-name"><%= marketingCommand.name %></div>
+            <div class="pwp-tag"><%= marketingCommand.tag %></div>
+          </div>
+          <button type="button" class="btn btn-primary btn-xs" id="mc-notify-btn">Notify Me</button>
+          <div class="pwp-coming">Coming <%= marketingCommand.eta %></div>
+        </div>
+      </div>
+    </section>
+  </aside>
+</div>
+
+<!-- Marketing Command Notify Me modal -->
+<div class="modal" id="mc-modal" aria-hidden="true">
+  <div class="modal-backdrop" data-close-modal></div>
+  <div class="modal-card">
+    <div class="modal-head">
+      <h2 class="h2">Notify me when Marketing Command launches</h2>
+      <button type="button" class="modal-close" data-close-modal aria-label="Close">&times;</button>
+    </div>
+    <form id="mc-notify-form" class="modal-body">
+      <div class="mc-tag muted">CRM, phone, SMS, email — pre-integrated comm stack for brokerages. Coming Q2 2026.</div>
+      <label for="mc-email">Email</label>
+      <input type="email" id="mc-email" name="email" required autofocus />
+      <div class="modal-actions">
+        <button type="button" class="btn btn-ghost" data-close-modal>Cancel</button>
+        <button type="submit" class="btn btn-primary">Notify Me</button>
+      </div>
+      <div class="notify-success" id="mc-success" hidden>
+        ✓ You're on the list. We'll email <span id="mc-success-email"></span> the moment Marketing Command is live.
+      </div>
+    </form>
+  </div>
+</div>

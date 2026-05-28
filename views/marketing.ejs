@@ -1,0 +1,138 @@
+<section class="page-header">
+  <div class="flex-between">
+    <div>
+      <h1 class="h1">Marketing Command Center</h1>
+      <div class="sub">Brokerage-wide campaigns, brand assets, recruiting marketing, content calendar.</div>
+    </div>
+    <button type="button" class="btn btn-primary" onclick="alert('New Campaign flow — wired in v2.');">+ New Campaign</button>
+  </div>
+</section>
+
+<section class="stats-row stats-4">
+  <% stats.forEach(s => { %>
+    <div class="stat-card">
+      <div class="stat-label"><%= s.label %></div>
+      <div class="stat-value"><%= s.value %></div>
+    </div>
+  <% }); %>
+</section>
+
+<div class="marketing-grid">
+  <div class="marketing-main card">
+    <nav class="tabs" id="marketing-tabs">
+      <button type="button" class="tab-btn active" data-tab="campaigns">Active Campaigns</button>
+      <button type="button" class="tab-btn" data-tab="assets">Brand Assets</button>
+      <button type="button" class="tab-btn" data-tab="recruiting">Recruiting Marketing</button>
+      <button type="button" class="tab-btn" data-tab="calendar">Content Calendar</button>
+    </nav>
+
+    <div class="tab-panel active" data-panel="campaigns">
+      <div class="table-wrap">
+        <table class="bc-table">
+          <thead><tr><th>Campaign</th><th>Type</th><th>Audience</th><th>Spend MTD</th><th>Leads</th><th>Status</th><th></th></tr></thead>
+          <tbody>
+            <% campaigns.forEach(c => { %>
+              <tr>
+                <td><strong><%= c.name %></strong></td>
+                <td><%= c.type %></td>
+                <td><%= c.audience %></td>
+                <td><%= c.spend %></td>
+                <td><%= c.leads %></td>
+                <td><span class="status-dot status-green"></span><%= c.status %></td>
+                <td class="right">
+                  <button type="button" class="btn btn-ghost btn-xs" onclick="alert('Edit campaign — v2');">Edit</button>
+                  <button type="button" class="btn btn-ghost btn-xs" onclick="alert('Pause campaign — v2');">Pause</button>
+                </td>
+              </tr>
+            <% }); %>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <div class="tab-panel" data-panel="assets">
+      <div class="asset-grid">
+        <% brandAssets.forEach(a => { %>
+          <article class="asset-card">
+            <div class="asset-thumb"><span class="asset-thumb-text"><%= a.type %></span></div>
+            <div class="asset-name"><%= a.name %></div>
+            <div class="asset-actions">
+              <button type="button" class="btn btn-ghost btn-xs" onclick="alert('Download — v2');">Download</button>
+              <button type="button" class="btn btn-primary btn-xs" onclick="alert('Customization tool coming in v2.');">Customize</button>
+            </div>
+          </article>
+        <% }); %>
+      </div>
+    </div>
+
+    <div class="tab-panel" data-panel="recruiting">
+      <div class="asset-grid">
+        <% recruitingAssets.forEach(a => { %>
+          <article class="asset-card">
+            <div class="asset-thumb asset-thumb-gold"><span class="asset-thumb-text"><%= a.type %></span></div>
+            <div class="asset-name"><%= a.name %></div>
+            <div class="asset-actions">
+              <button type="button" class="btn btn-ghost btn-xs" onclick="alert('Preview — v2');">Preview</button>
+              <button type="button" class="btn btn-primary btn-xs" onclick="alert('Use this asset — v2');">Use</button>
+            </div>
+          </article>
+        <% }); %>
+      </div>
+    </div>
+
+    <div class="tab-panel" data-panel="calendar">
+      <div class="calendar-head">
+        <div class="calendar-title"><%= contentCalendar.monthName %> <%= contentCalendar.year %></div>
+        <div class="sub">12 scheduled items this month</div>
+      </div>
+      <div class="calendar-weekdays">
+        <% ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'].forEach(d => { %>
+          <div><%= d %></div>
+        <% }); %>
+      </div>
+      <div class="calendar-grid">
+        <% contentCalendar.cells.forEach(cell => { %>
+          <% if (cell.empty) { %>
+            <div class="cal-cell cal-cell-empty"></div>
+          <% } else { %>
+            <div class="cal-cell<%= cell.items && cell.items.length ? ' cal-cell-has' : '' %>">
+              <div class="cal-num"><%= cell.day %></div>
+              <% if (cell.items && cell.items.length) { %>
+                <% cell.items.forEach(it => { %>
+                  <div class="cal-item" title="<%= it.title %>">
+                    <span class="cal-plat"><%= it.platform %></span>
+                    <span class="cal-title"><%= it.title %></span>
+                  </div>
+                <% }); %>
+              <% } %>
+            </div>
+          <% } %>
+        <% }); %>
+      </div>
+    </div>
+  </div>
+
+  <aside class="card marketing-side">
+    <h2 class="h2">Marketing ROI</h2>
+    <div class="metric-row">
+      <div class="metric-label">Cost per consumer lead</div>
+      <div class="metric-val"><%= roi.cost_per_consumer_lead %></div>
+    </div>
+    <div class="metric-row">
+      <div class="metric-label">Cost per recruit lead</div>
+      <div class="metric-val"><%= roi.cost_per_recruit_lead %></div>
+    </div>
+    <div class="metric-row">
+      <div class="metric-label">Best channel</div>
+      <div class="metric-val metric-good"><%= roi.best_channel %></div>
+    </div>
+    <div class="metric-row">
+      <div class="metric-label">Worst channel</div>
+      <div class="metric-val metric-bad"><%= roi.worst_channel %></div>
+    </div>
+
+    <div class="side-note" style="margin-top:18px;">
+      <strong>v2 note:</strong> Agent Command will ship a per-agent marketing module. BC's marketing is brokerage-wide; AC's will be personalized to each agent's listings and contact info.
+    </div>
+  </aside>
+</div>

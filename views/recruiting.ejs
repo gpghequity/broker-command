@@ -1,0 +1,151 @@
+<section class="page-header">
+  <div class="flex-between">
+    <div>
+      <h1 class="h1">Recruiting Pipeline</h1>
+      <div class="sub">Top-of-funnel — prospects before they become agents in Agent Command.</div>
+    </div>
+    <button type="button" class="btn btn-primary" id="open-add-prospect">+ Add Prospect</button>
+  </div>
+</section>
+
+<section class="stats-row stats-4">
+  <div class="stat-card">
+    <div class="stat-label">Sourced</div>
+    <div class="stat-value"><%= stages.sourced.length %></div>
+    <div class="stat-delta delta-muted">raw leads, no contact yet</div>
+  </div>
+  <div class="stat-card">
+    <div class="stat-label">Contacted</div>
+    <div class="stat-value"><%= stages.contacted.length %></div>
+    <div class="stat-delta delta-muted">initial outreach made</div>
+  </div>
+  <div class="stat-card">
+    <div class="stat-label">In Conversation</div>
+    <div class="stat-value"><%= stages.conversation.length %></div>
+    <div class="stat-delta delta-muted">active, weighing offer</div>
+  </div>
+  <div class="stat-card">
+    <div class="stat-label">Offer Extended</div>
+    <div class="stat-value"><%= stages.offer.length %></div>
+    <div class="stat-delta delta-muted">awaiting decision</div>
+  </div>
+</section>
+
+<div class="recruit-grid">
+  <div class="kanban">
+    <% const cols = [
+      { key: 'sourced',      title: 'Sourced' },
+      { key: 'contacted',    title: 'Contacted' },
+      { key: 'conversation', title: 'In Conversation' },
+      { key: 'offer',        title: 'Offer Extended' }
+    ]; %>
+    <% cols.forEach(col => { %>
+      <section class="kanban-col" data-stage="<%= col.key %>">
+        <div class="kanban-col-head"><%= col.title %> <span class="kanban-count"><%= stages[col.key].length %></span></div>
+        <div class="kanban-cards">
+          <% stages[col.key].forEach(p => { %>
+            <article class="prospect-card<%= p.hot ? ' prospect-card-hot' : '' %>" data-prospect='<%= JSON.stringify(p) %>'>
+              <div class="prospect-head">
+                <strong class="prospect-name"><%= p.name %></strong>
+                <% if (p.hot) { %><span class="badge badge-red">HOT</span><% } %>
+              </div>
+              <div class="prospect-line"><%= p.brokerage %> · <%= p.state %></div>
+              <div class="prospect-gci">$<%= (p.gci / 1000).toFixed(0) %>K GCI</div>
+              <div class="prospect-meta">
+                <span class="meta-pill"><%= p.days %>d in stage</span>
+                <span class="meta-pill"><%= p.source %></span>
+              </div>
+              <div class="prospect-foot">Last touch: <%= p.lastTouch %></div>
+              <% if (p.note) { %><div class="prospect-note"><%= p.note %></div><% } %>
+            </article>
+          <% }); %>
+        </div>
+      </section>
+    <% }); %>
+  </div>
+
+  <aside class="card recruit-side">
+    <h2 class="h2">Recruiting Metrics</h2>
+    <div class="metric-row">
+      <div class="metric-label">Conversion rate</div>
+      <div class="metric-val"><%= metrics.conversion_rate %></div>
+    </div>
+    <div class="metric-row">
+      <div class="metric-label">Avg days sourced → hired</div>
+      <div class="metric-val"><%= metrics.avg_days %></div>
+    </div>
+    <div class="metric-row">
+      <div class="metric-label">Top source</div>
+      <div class="metric-val"><%= metrics.top_source %></div>
+    </div>
+    <div class="metric-row">
+      <div class="metric-label">Cost per acquisition</div>
+      <div class="metric-val"><%= metrics.cost_per_acquisition %></div>
+    </div>
+  </aside>
+</div>
+
+<!-- Add Prospect modal -->
+<div class="modal" id="add-prospect-modal" aria-hidden="true">
+  <div class="modal-backdrop" data-close-modal></div>
+  <div class="modal-card">
+    <div class="modal-head">
+      <h2 class="h2">Add Prospect</h2>
+      <button type="button" class="modal-close" data-close-modal aria-label="Close">&times;</button>
+    </div>
+    <form action="/recruiting/add" method="POST" class="modal-body">
+      <label for="ap-name">Name *</label>
+      <input type="text" name="name" id="ap-name" required />
+      <div class="grid-2">
+        <div>
+          <label for="ap-brokerage">Current Brokerage</label>
+          <input type="text" name="brokerage" id="ap-brokerage" />
+        </div>
+        <div>
+          <label for="ap-state">State</label>
+          <input type="text" name="state" id="ap-state" maxlength="2" />
+        </div>
+      </div>
+      <div class="grid-2">
+        <div>
+          <label for="ap-gci">Estimated GCI ($)</label>
+          <input type="number" name="gci" id="ap-gci" min="0" step="5000" />
+        </div>
+        <div>
+          <label for="ap-source">Source</label>
+          <select name="source" id="ap-source">
+            <option>Referral</option>
+            <option>Online</option>
+            <option>Event</option>
+            <option>Cold outreach</option>
+            <option>Other</option>
+          </select>
+        </div>
+      </div>
+      <div class="modal-actions">
+        <button type="button" class="btn btn-ghost" data-close-modal>Cancel</button>
+        <button type="submit" class="btn btn-primary">Add to Sourced</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- Prospect detail modal -->
+<div class="modal" id="prospect-modal" aria-hidden="true">
+  <div class="modal-backdrop" data-close-modal></div>
+  <div class="modal-card modal-card-wide">
+    <div class="modal-head">
+      <h2 class="h2" id="prospect-modal-name">Prospect</h2>
+      <button type="button" class="modal-close" data-close-modal aria-label="Close">&times;</button>
+    </div>
+    <div class="modal-body" id="prospect-modal-body">
+      <div id="prospect-detail"></div>
+      <div class="modal-actions modal-actions-full">
+        <button type="button" class="btn btn-ghost" data-prospect-action="prev">← Prev Stage</button>
+        <button type="button" class="btn btn-primary" data-prospect-action="next">Move to Next Stage →</button>
+        <button type="button" class="btn btn-ghost" data-prospect-action="lose">Mark as Lost</button>
+        <button type="button" class="btn btn-primary" data-prospect-action="convert">Convert to Agent (AC handoff)</button>
+      </div>
+    </div>
+  </div>
+</div>
