@@ -33,11 +33,13 @@ app.use(session({
 
 // PwP family + Marketing Command (coming soon)
 const PWP_FAMILY = [
-  { name: 'REI Homepage',       badge: 'RH', href: 'https://rei-homepage-deal-analysis-production.up.railway.app', tag: 'Deal analysis + inspection + comms' },
-  { name: 'Transaction Command',badge: 'TC', href: 'https://transaction-command-production.up.railway.app',        tag: 'Transaction compliance + document review' },
-  { name: 'Agent Command',      badge: 'AC', href: 'https://agent-command-production.up.railway.app',             tag: 'Agent onboarding + training + roster' },
-  { name: 'Lender Command',     badge: 'LC', href: 'https://lender-command-production.up.railway.app',            tag: 'Private lending intake + DSCR + AI UW' },
-  { name: 'Data Command',       badge: 'DC', href: 'https://data-command-production.up.railway.app',              tag: 'Real estate data + skip trace + lists' }
+  { name: 'REI Homepage',       badge: 'RH', href: 'https://gorilla-ai-production.up.railway.app',         tag: 'Deal analysis + inspection + comms' },
+  // TODO: transaction-command not yet deployed to Railway — placeholder until live URL confirmed
+  { name: 'Transaction Command',badge: 'TC', href: '#',                                                     tag: 'Transaction compliance + document review' },
+  { name: 'Agent Command',      badge: 'AC', href: 'https://agentcommand-production.up.railway.app',        tag: 'Agent onboarding + training + roster' },
+  { name: 'Lender Command',     badge: 'LC', href: 'https://lender-command-production.up.railway.app',      tag: 'Private lending intake + DSCR + AI UW' },
+  // TODO: data-command not yet deployed to Railway — placeholder until live URL confirmed
+  { name: 'Data Command',       badge: 'DC', href: '#',                                                     tag: 'Real estate data + skip trace + lists' }
 ];
 const MARKETING_COMMAND = {
   name: 'Marketing Command',
@@ -322,7 +324,7 @@ app.get('/compliance', requireAuth, (req, res) => {
       daysOpen: 2,
       assigned: 'Naire Crayton',
       status: 'Awaiting agent action',
-      tcLink: 'https://transaction-command-production.up.railway.app'
+      tcLink: '#' // TODO: transaction-command not yet deployed to Railway
     }
   ];
 
