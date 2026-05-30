@@ -7,6 +7,31 @@ const path = require('path');
 const crypto = require('crypto');
 const rateLimit = require('express-rate-limit');
 const generalLimiter = rateLimit({ windowMs: 15 * 60 * 1000, max: 100, standardHeaders: true, legacyHeaders: false });
+const { google } = require('googleapis');
+
+let _sheetsCl = null;
+function getSh() {
+  if (_sheetsCl) return _sheetsCl;
+  const raw = process.env.GOOGLE_SERVICE_ACCOUNT_JSON;
+  if (!raw) return null;
+  try {
+    const c = JSON.parse(raw);
+    const auth = new google.auth.JWT({ email: c.client_email, key: c.private_key, scopes: ['https://www.googleapis.com/auth/spreadsheets.readonly'] });
+    _sheetsCl = google.sheets({ version: 'v4', auth });
+    return _sheetsCl;
+  } catch { return null; }
+}
+async function readSh(tab) {
+  const s = getSh(); const id = process.env.GOOGLE_SHEETS_ID;
+  if (!s || !id) return [];
+  try {
+    const res = await s.spreadsheets.values.get({ spreadsheetId: id, range: `'${tab}'!A:ZZ` });
+    const rows = res.data.values || [];
+    if (rows.length < 2) return [];
+    const headers = rows[0].map(h => String(h).toLowerCase().replace(/\s+/g, '_'));
+    return rows.slice(1).map(row => { const o = {}; headers.forEach((h, i) => { o[h] = row[i] || ''; }); return o; });
+  } catch { return []; }
+}
 
 // ─── VERSION + DEPLOY TIMESTAMP ───────────────────────────────────────────
 const APP_VERSION = 'v1.0';
@@ -95,49 +120,56 @@ app.get('/logout', (req, res) => req.session.destroy(() => res.redirect('/login'
 
 app.get('/', (req, res) => res.redirect(req.session.isBroker ? '/dashboard' : '/login'));
 
-// ─── DASHBOARD ─────────────────────────────────────────────────────────────
-app.get('/dashboard', requireAuth, (req, res) => {
+// ─── DASHBOARD — live from Properties + Closing Pipeline + Licensed Agents ──
+app.get('/dashboard', requireAuth, async (req, res) => {
+  let pipelineRows = [], agentRows = [], propRows = [];
+  try {
+    [pipelineRows, agentRows, propRows] = await Promise.all([
+      readSh('Closing Pipeline'), readSh('Licensed Agents'), readSh('Properties')
+    ]);
+  } catch { /* fall through */ }
+
+  const activeAgents = agentRows.filter(r => (r.status || 'active').toLowerCase().includes('active'));
+  const closedDeals = pipelineRows.filter(r => (r.stage || r.status || '').toLowerCase().includes('closed'));
+  const activeDeals = pipelineRows.filter(r => !(r.stage || r.status || '').toLowerCase().includes('closed'));
+
+  // Compute top agents from Closing Pipeline submitter attribution
+  const agentStats = {};
+  for (const row of closedDeals) {
+    const name = row.submitter_name || row.agent_name || row.assigned_to || 'Team';
+    if (!agentStats[name]) agentStats[name] = { txns: 0 };
+    agentStats[name].txns++;
+  }
+  const topAgents = Object.entries(agentStats).sort((a, b) => b[1].txns - a[1].txns).slice(0, 5).map(([name, data], i) => ({
+    rank: i + 1, name, txns: data.txns, gci: 'See Leaderboard', trend: '→'
+  }));
+  if (!topAgents.length) topAgents.push({ rank: 1, name: 'No closed deals yet', txns: 0, gci: '--', trend: '--' });
+
   const stats = [
-    { label: 'MRR — Brokerage Revenue',  value: '$14,247', delta: '↑ 12% vs last month', deltaClass: 'delta-good' },
-    { label: 'Active Agents',             value: '6',       delta: '2 in onboarding',        deltaClass: 'delta-muted' },
-    { label: 'Pipeline Value',            value: '$2.4M',   delta: 'Closing 30 days: $890K', deltaClass: 'delta-muted' },
-    { label: 'Compliance Status',         value: '1 flag',  delta: 'Last audit: Passed',     deltaClass: 'delta-muted' }
+    { label: 'Active Agents',      value: String(activeAgents.length || agentRows.length), delta: `${agentRows.filter(r => (r.status||'').toLowerCase().includes('onboarding')).length} in onboarding`, deltaClass: 'delta-muted' },
+    { label: 'Active Deals',       value: String(activeDeals.length), delta: `${closedDeals.length} closed`, deltaClass: 'delta-muted' },
+    { label: 'New Leads',          value: String(propRows.length), delta: 'From all intake sources', deltaClass: 'delta-muted' },
+    { label: 'Data Source',        value: process.env.GOOGLE_SHEETS_ID ? 'Live (Sheets)' : 'No Sheet ID', delta: '', deltaClass: 'delta-muted' }
   ];
 
-  const topAgents = [
-    { rank: 1, name: 'Ryan Franco',   txns: 11, gci: '$42,800', trend: '↑' },
-    { rank: 2, name: 'Naire Crayton', txns: 4,  gci: '$18,200', trend: '↑' },
-    { rank: 3, name: 'Drew Mitchell', txns: 1,  gci: '$4,200',  trend: '→' },
-    { rank: 4, name: 'Connor Walsh',  txns: 0,  gci: '$0',      trend: 'new' },
-    { rank: 5, name: 'Alex Torres',   txns: 0,  gci: '$0',      trend: 'new' }
-  ];
+  const attention = activeDeals.filter(r => {
+    const stage = (r.stage || r.status || '').toLowerCase();
+    return stage.includes('stuck') || stage.includes('review');
+  }).slice(0, 5).map(r => `${r.property_address || r.address || 'Deal'} — ${r.stage || r.status || 'needs review'}`);
+
+  if (!attention.length) attention.push('No items requiring attention');
 
   const healthScore = {
-    total: 87,
+    total: activeAgents.length > 0 ? 82 : 60,
     breakdown: [
-      { label: 'Agent retention',     score: 92, color: 'green' },
-      { label: 'Compliance',          score: 78, color: 'orange' },
-      { label: 'Productivity',        score: 84, color: 'green' },
-      { label: 'Recruitment pipeline',score: 65, color: 'orange' },
-      { label: 'Financial',           score: 95, color: 'green' }
+      { label: 'Agent roster', score: agentRows.length > 3 ? 90 : 60, color: agentRows.length > 3 ? 'green' : 'orange' },
+      { label: 'Pipeline',     score: activeDeals.length > 0 ? 85 : 50, color: activeDeals.length > 0 ? 'green' : 'orange' },
+      { label: 'Lead volume',  score: propRows.length > 5 ? 88 : 65, color: propRows.length > 5 ? 'green' : 'orange' },
     ]
   };
 
-  const attention = [
-    'Drew Mitchell — 60 days since last transaction, training Module 4 incomplete',
-    'Compliance flag open on 215 Pine Street transaction (2 days)',
-    '3 inbound recruit applications waiting for review',
-    'E&O insurance renewal due in 23 days',
-    'Q1 commission accounting needs reconciliation'
-  ];
-
   const today = new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' });
-
-  res.render('layout', {
-    page: 'dashboard',
-    title: 'Executive Dashboard — Broker Command',
-    stats, topAgents, healthScore, attention, today
-  });
+  res.render('layout', { page: 'dashboard', title: 'Executive Dashboard — Broker Command', stats, topAgents, healthScore, attention, today });
 });
 
 // ─── RECRUITING ────────────────────────────────────────────────────────────
