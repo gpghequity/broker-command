@@ -71,17 +71,27 @@ const MARKETING_COMMAND = {
   tag: 'CRM, phone, SMS, email — pre-integrated comm stack for brokerages.'
 };
 
-// In-memory recruiting prospects + marketing notify signups
-const prospects = [
-  { id: 'p1', stage: 'sourced',      name: 'Maria Gonzalez',  brokerage: 'Berkshire Hathaway', state: 'PA', gci: 180000, days: 3,  lastTouch: '2026-04-13', source: 'Referral', hot: false },
-  { id: 'p2', stage: 'sourced',      name: "James O'Brien",   brokerage: 'Keller Williams',    state: 'PA', gci: 95000,  days: 5,  lastTouch: '2026-04-11', source: 'Online', hot: false },
-  { id: 'p3', stage: 'sourced',      name: 'Sarah Patel',     brokerage: 'RE/MAX',             state: 'OH', gci: 220000, days: 8,  lastTouch: '2026-04-08', source: 'Event', hot: false },
-  { id: 'p4', stage: 'contacted',    name: 'Mike Reynolds',   brokerage: 'Coldwell Banker',    state: 'PA', gci: 140000, days: 4,  lastTouch: '2026-04-12', source: 'Cold outreach', hot: false },
-  { id: 'p5', stage: 'contacted',    name: 'Jenny Thompson',  brokerage: 'Independent',        state: 'PA', gci: 65000,  days: 9,  lastTouch: '2026-04-07', source: 'Referral', hot: false },
-  { id: 'p6', stage: 'conversation', name: 'Kevin Park',      brokerage: 'eXp Realty',         state: 'PA', gci: 310000, days: 12, lastTouch: '2026-04-04', source: 'Referral', hot: true  },
-  { id: 'p7', stage: 'conversation', name: 'Lisa Chen',       brokerage: 'Howard Hanna',       state: 'OH', gci: 175000, days: 6,  lastTouch: '2026-04-10', source: 'Event', hot: false },
-  { id: 'p8', stage: 'offer',        name: 'Tony Marino',     brokerage: 'Long & Foster',      state: 'PA', gci: 250000, days: 5,  lastTouch: '2026-04-11', source: 'Referral', hot: false, note: 'Decision expected this week' }
-];
+// Recruiting prospects are loaded live from the "Recruiting Pipeline" Google Sheet tab.
+// No prospect data is stored in source code.
+// Fallback: empty array when Sheets is unavailable.
+async function getProspects() {
+  const rows = await readSh('Recruiting Pipeline');
+  if (!rows.length) return [];
+  return rows.map((r, i) => ({
+    id:        r.id        || ('p_live_' + i),
+    stage:     (r.stage    || 'sourced').toLowerCase().trim(),
+    name:      r.name      || '',
+    brokerage: r.brokerage || '—',
+    state:     (r.state    || '').toUpperCase(),
+    gci:       parseInt(r.gci, 10) || 0,
+    days:      parseInt(r.days, 10) || 0,
+    lastTouch: r.last_touch || r.lasttouch || '',
+    source:    r.source    || '',
+    hot:       String(r.hot).toLowerCase() === 'true',
+    note:      r.note      || ''
+  }));
+}
+
 const mcNotifyList = [];
 
 // Locals
@@ -173,7 +183,9 @@ app.get('/dashboard', requireAuth, async (req, res) => {
 });
 
 // ─── RECRUITING ────────────────────────────────────────────────────────────
-app.get('/recruiting', requireAuth, (req, res) => {
+app.get('/recruiting', requireAuth, async (req, res) => {
+  let prospects = [];
+  try { prospects = await getProspects(); } catch { /* fallback: empty */ }
   const stages = {
     sourced:      prospects.filter(p => p.stage === 'sourced'),
     contacted:    prospects.filter(p => p.stage === 'contacted'),
@@ -193,44 +205,44 @@ app.get('/recruiting', requireAuth, (req, res) => {
   });
 });
 
+// NOTE: /recruiting/add, /move, /lose, /convert are write operations.
+// Prospect data lives in Google Sheets; these endpoints return acknowledgement
+// responses and rely on the operator to update the Sheet directly.
+// A full Sheets write-back integration is a v2 enhancement.
 app.post('/recruiting/add', requireAuth, (req, res) => {
   const { name, brokerage, state, gci, source } = req.body;
   if (!name) return res.redirect('/recruiting');
-  prospects.unshift({
-    id: 'p_' + crypto.randomBytes(4).toString('hex'),
-    stage: 'sourced',
-    name: name.trim(),
-    brokerage: (brokerage || '').trim() || '—',
-    state: (state || '').toUpperCase(),
-    gci: parseInt(gci, 10) || 0,
-    days: 0,
-    lastTouch: new Date().toISOString().slice(0, 10),
-    source: source || 'Manual',
-    hot: false
-  });
+  // Prospect is added to Sheet by operator; this confirms receipt.
+  console.log(`[recruiting/add] New prospect submitted: ${name.trim()} — update Recruiting Pipeline Sheet to persist.`);
   res.redirect('/recruiting');
 });
 
-app.post('/recruiting/:id/move', requireAuth, (req, res) => {
+app.post('/recruiting/:id/move', requireAuth, async (req, res) => {
   const { direction } = req.body;
+  let prospects = [];
+  try { prospects = await getProspects(); } catch { /* fallback */ }
   const prospect = prospects.find(p => p.id === req.params.id);
   if (!prospect) return res.status(404).json({ error: 'not found' });
   const order = ['sourced', 'contacted', 'conversation', 'offer'];
   const idx = order.indexOf(prospect.stage);
-  if (direction === 'next' && idx < order.length - 1) prospect.stage = order[idx + 1];
-  if (direction === 'prev' && idx > 0) prospect.stage = order[idx - 1];
-  prospect.days = 0;
-  prospect.lastTouch = new Date().toISOString().slice(0, 10);
-  res.json({ ok: true, stage: prospect.stage });
+  let newStage = prospect.stage;
+  if (direction === 'next' && idx < order.length - 1) newStage = order[idx + 1];
+  if (direction === 'prev' && idx > 0) newStage = order[idx - 1];
+  console.log(`[recruiting/move] ${prospect.name} → ${newStage} — update Recruiting Pipeline Sheet to persist.`);
+  res.json({ ok: true, stage: newStage });
 });
 
-app.post('/recruiting/:id/lose', requireAuth, (req, res) => {
-  const idx = prospects.findIndex(p => p.id === req.params.id);
-  if (idx >= 0) prospects.splice(idx, 1);
+app.post('/recruiting/:id/lose', requireAuth, async (req, res) => {
+  let prospects = [];
+  try { prospects = await getProspects(); } catch { /* fallback */ }
+  const prospect = prospects.find(p => p.id === req.params.id);
+  console.log(`[recruiting/lose] ${prospect ? prospect.name : req.params.id} marked lost — update Recruiting Pipeline Sheet to persist.`);
   res.json({ ok: true });
 });
 
-app.post('/recruiting/:id/convert', requireAuth, (req, res) => {
+app.post('/recruiting/:id/convert', requireAuth, async (req, res) => {
+  let prospects = [];
+  try { prospects = await getProspects(); } catch { /* fallback */ }
   const prospect = prospects.find(p => p.id === req.params.id);
   if (!prospect) return res.status(404).json({ error: 'not found' });
   res.json({ ok: true, handoff_target: 'agent-command', placeholder: true, message: `${prospect.name} would be handed off to Agent Command onboarding — v2 wiring.` });
